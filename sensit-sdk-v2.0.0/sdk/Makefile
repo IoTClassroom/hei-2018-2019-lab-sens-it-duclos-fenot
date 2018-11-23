@@ -13,7 +13,7 @@ LIB_PATH = C:/Users/lucas/Documents/HEI/H4/ObjetCo/hei-2018-2019-lab-sens-it-duc
 # --------------
 # OUTPUT FOLDERS
 # --------------
-BIN_PATH = C:/Users/lucas/Documents/HEI/H4/ObjetCo/hei-2018-2019-lab-sens-it-duclos-fenot/sensit-sdk-v2.0.0/bin
+BIN_PATH = C:/Users/lucas/Documents/HEI/H4/ObjetCo/hei-2018-2019-lab-sens-it-duclos-fenot/sensit-sdk-v2.0.0/sdk/bin
 OBJ_PATH = C:/Users/lucas/Documents/HEI/H4/ObjetCo/hei-2018-2019-lab-sens-it-duclos-fenot/sensit-sdk-v2.0.0/sdk/obj
 
 
