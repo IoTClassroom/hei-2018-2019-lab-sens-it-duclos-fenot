@@ -68,7 +68,7 @@ int main()
         /* RTC alarm interrupt handler */
         if ((pending_interrupt & INTERRUPT_MASK_RTC) == INTERRUPT_MASK_RTC)
         {
-            /* Do a temperatue & relative humidity measurement */
+            /* Do a temperature & relative humidity measurement */
             err = HTS221_measure(&(data.temperature), &(data.humidity));
             if (err != HTS221_ERR_NONE)
             {

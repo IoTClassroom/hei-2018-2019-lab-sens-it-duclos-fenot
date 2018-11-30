@@ -17,21 +17,33 @@
 #include "hts221.h"
 #include "ltr329.h"
 #include "fxos8700.h"
+#include "discovery.h"
+
+
+
 
 
 /******* GLOBAL VARIABLES ******************************************/
 u8 firmware_version[] = "TEMPLATE";
 
 
+
 /*******************************************************************/
 
-int main()
-{
+int main() {
     error_t err;
     button_e btn;
     u16 battery_level;
+    bool send = FALSE;
+
 
     /* Start of initialization */
+
+
+    /* Discovery payload variable */
+    discovery_data_s data = {0};
+    discovery_payload_s payload;
+
 
     /* Configure button */
     SENSIT_API_configure_button(INTERRUPT_BOTH_EGDE);
@@ -44,36 +56,35 @@ int main()
     err = HTS221_init();
     ERROR_parser(err);
 
+
     /* Initialize light sensor */
     err = LTR329_init();
     ERROR_parser(err);
 
-    /* Initialize accelerometer */
-    err = FXOS8700_init();
-    ERROR_parser(err);
 
     /* Clear pending interrupt */
     pending_interrupt = 0;
 
     /* End of initialization */
 
-    while (TRUE)
-    {
+    while (TRUE) {
         /* Execution loop */
 
         /* Check of battery level */
         BATTERY_handler(&battery_level);
 
         /* RTC alarm interrupt handler */
-        if ((pending_interrupt & INTERRUPT_MASK_RTC) == INTERRUPT_MASK_RTC)
-        {
+        if ((pending_interrupt & INTERRUPT_MASK_RTC) == INTERRUPT_MASK_RTC) {
             /* Clear interrupt */
             pending_interrupt &= ~INTERRUPT_MASK_RTC;
         }
+        HTS221_measure(data.temperature,data.humidity);
+
+
+
 
         /* Button interrupt handler */
-        if ((pending_interrupt & INTERRUPT_MASK_BUTTON) == INTERRUPT_MASK_BUTTON)
-        {
+        if ((pending_interrupt & INTERRUPT_MASK_BUTTON) == INTERRUPT_MASK_BUTTON) {
             /* RGB Led ON during count of button presses */
             SENSIT_API_set_rgb_led(RGB_WHITE);
 
@@ -83,8 +94,7 @@ int main()
             /* RGB Led OFF */
             SENSIT_API_set_rgb_led(RGB_OFF);
 
-            if (btn == BUTTON_FOUR_PRESSES)
-            {
+            if (btn == BUTTON_FOUR_PRESSES) {
                 /* Reset the device */
                 SENSIT_API_reset();
             }
@@ -94,25 +104,54 @@ int main()
         }
 
         /* Reed switch interrupt handler */
-        if ((pending_interrupt & INTERRUPT_MASK_REED_SWITCH) == INTERRUPT_MASK_REED_SWITCH)
-        {
+        if ((pending_interrupt & INTERRUPT_MASK_REED_SWITCH) == INTERRUPT_MASK_REED_SWITCH) {
             /* Clear interrupt */
             pending_interrupt &= ~INTERRUPT_MASK_REED_SWITCH;
         }
 
-        /* Accelerometer interrupt handler */
-        if ((pending_interrupt & INTERRUPT_MASK_FXOS8700) == INTERRUPT_MASK_FXOS8700)
+
+
+
+
+
+        /* Do a temperature & relative humidity measurement */
+        err = HTS221_measure(&(data.temperature), &(data.humidity));
+        if (err != HTS221_ERR_NONE) {
+            ERROR_parser(err);
+        } else {
+            /*Set send flag */
+            if (data.temperature < 10 || data.temperature > 11) {
+                send = TRUE;
+            }
+
+        }
+        /* Check if we need to send a message */
+        if (send == TRUE)
         {
-            /* Clear interrupt */
-            pending_interrupt &= ~INTERRUPT_MASK_FXOS8700;
+            /* Build the payload */
+            DISCOVERY_build_payload(&payload, MODE_TEMPERATURE, &data);
+
+            /* Send the message */
+            err = RADIO_API_send_message(RGB_GREEN, (u8*)&payload, DISCOVERY_PAYLOAD_SIZE, FALSE, NULL);
+            /* Parse the error code */
+            ERROR_parser(err);
+
+            /* Clear button flag */
+            data.button = FALSE;
+
+            /* Clear send flag */
+            send = FALSE;
         }
 
+
         /* Check if all interrupt have been clear */
-        if (pending_interrupt == 0)
-        {
+        if (pending_interrupt == 0) {
             /* Wait for Interrupt */
             SENSIT_API_sleep(FALSE);
         }
+        pending_interrupt &= ~INTERRUPT_MASK_FXOS8700;
+
+
     } /* End of while */
 }
 
